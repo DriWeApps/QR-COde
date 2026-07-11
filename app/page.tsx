@@ -49,6 +49,27 @@ export default function Home() {
     0
   );
 
+  const getQRStatus = (destination?: string) => {
+    return destination && destination.trim().length > 0 ? "Success" : "Fail";
+  };
+
+  const formatCreatedAt = (value?: string) => {
+    if (!value) return "-";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-white">
       <div className="max-w-7xl mx-auto p-8">
@@ -148,7 +169,7 @@ export default function Home() {
                     </th>
 
                     <th className="text-left px-6 py-4 text-slate-300">
-                      Destination
+                      QR Status
                     </th>
 
                     <th className="text-left px-6 py-4 text-slate-300">
@@ -177,26 +198,15 @@ export default function Home() {
                       </td>
 
                       <td className="px-6 py-5">
-
-                        {qr.destination ? (
-
-                          <a
-                            href={qr.destination}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:text-cyan-300 underline"
-                          >
-                            Open QR Link
-                          </a>
-
-                        ) : (
-
-                          <span className="text-slate-500">
-                            -
-                          </span>
-
-                        )}
-
+                        <span
+                          className={`rounded-full px-3 py-1 font-semibold ${
+                            getQRStatus(qr.destination) === "Success"
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {getQRStatus(qr.destination)}
+                        </span>
                       </td>
 
                       <td className="px-6 py-5">
@@ -208,11 +218,7 @@ export default function Home() {
                       </td>
 
                       <td className="px-6 py-5 text-slate-400">
-
-                        {qr.createdAt
-                          ? new Date(qr.createdAt).toLocaleDateString()
-                          : "-"}
-
+                        {formatCreatedAt(qr.createdAt)}
                       </td>
 
                     </tr>
