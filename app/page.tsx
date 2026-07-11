@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import QRGenerator from "@/components/QRGenerator";
-import StatsCard from "@/components/StatsCard";
 
 interface QRData {
   id: string;
@@ -16,23 +15,31 @@ export default function Home() {
   const [qrData, setQrData] = useState<QRData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch("/api/stats");
-      const data = await response.json();
-
-      if (data.success) {
-        setQrData(data.data || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchStats();
+    let cancelled = false;
+
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/stats");
+        const data = await response.json();
+
+        if (!cancelled && data.success) {
+          setQrData(data.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const totalQR = qrData.length;

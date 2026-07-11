@@ -7,8 +7,24 @@ import {
 
 import { db } from "@/lib/dynamodb";
 
-const QR_TABLE = process.env.QR_TABLE_NAME!;
-const SCAN_TABLE = process.env.SCAN_TABLE_NAME!;
+const QR_TABLE = process.env.QR_TABLE_NAME;
+const SCAN_TABLE = process.env.SCAN_TABLE_NAME;
+
+function getFriendlyErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    if (error.message.includes("Missing credentials")) {
+      return "DynamoDB credentials are not configured. Please add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.";
+    }
+
+    if (error.message.includes("ValidationException")) {
+      return "The DynamoDB table configuration is invalid. Please verify the table names and schema.";
+    }
+
+    return error.message;
+  }
+
+  return "The scan could not be saved right now.";
+}
 
 export async function GET(
   req: NextRequest,
@@ -16,33 +32,52 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const normalizedId = typeof id === "string" ? id.trim() : "";
 
-    // Find QR
+    if (!normalizedId) {
+      return NextResponse.json(
+        { success: false, error: "A valid QR ID is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!QR_TABLE || !SCAN_TABLE) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "QR tracking is not configured yet. Please set the DynamoDB table names in the environment.",
+        },
+        { status: 503 }
+      );
+    }
+
     const result = await db.send(
       new GetCommand({
         TableName: QR_TABLE,
-        Key: {
-          id,
-        },
+        Key: { id: normalizedId },
       })
     );
 
     if (!result.Item) {
       return NextResponse.json(
-        { error: "QR Code not found" },
+        {
+          success: false,
+          error: "We couldn't find that QR code. Please ask the owner to share a valid link.",
+        },
         { status: 404 }
       );
     }
 
-    // Increase scan count
+    const cafeName =
+      typeof result.Item.cafeName === "string"
+        ? result.Item.cafeName
+        : "this QR code";
+
     await db.send(
       new UpdateCommand({
         TableName: QR_TABLE,
-        Key: {
-          id,
-        },
-        UpdateExpression:
-          "SET scanCount = if_not_exists(scanCount, :zero) + :inc",
+        Key: { id: normalizedId },
+        UpdateExpression: "SET scanCount = if_not_exists(scanCount, :zero) + :inc",
         ExpressionAttributeValues: {
           ":zero": 0,
           ":inc": 1,
@@ -50,43 +85,35 @@ export async function GET(
       })
     );
 
-    // Save scan history
     await db.send(
       new PutCommand({
         TableName: SCAN_TABLE,
         Item: {
-          qrId: id,
+          qrId: normalizedId,
           scanId: crypto.randomUUID(),
           scannedAt: new Date().toISOString(),
           ip:
             req.headers.get("x-forwarded-for") ||
             req.headers.get("x-real-ip") ||
             "Unknown",
-          userAgent:
-            req.headers.get("user-agent") || "Unknown",
+          userAgent: req.headers.get("user-agent") || "Unknown",
+          cafeName,
         },
       })
     );
 
-    // Redirect to Thank You page
-//     return NextResponse.redirect(
-//   `${process.env.NEXT_PUBLIC_BASE_URL}/scan/${id}`,
-//   302
-// );
- return NextResponse.redirect(
-  new URL(`/scan/${id}`, req.url)
-);
+    const redirectUrl = new URL(`/scan/${encodeURIComponent(normalizedId)}`, req.url);
+    redirectUrl.searchParams.set(
+      "message",
+      `Thank you! Your scan for ${cafeName} has been recorded.`
+    );
 
+    return NextResponse.redirect(redirectUrl, 302);
   } catch (error) {
     console.error("Scan Error:", error);
-
     return NextResponse.json(
-      {
-        error: "Internal Server Error",
-      },
-      {
-        status: 500,
-      }
+      { success: false, error: getFriendlyErrorMessage(error) },
+      { status: 500 }
     );
   }
 }

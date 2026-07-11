@@ -139,17 +139,20 @@ export default function QRGenerator() {
     try {
       setLoading(true);
 
-      const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
+    //   const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 
-      if (!baseURL) {
-        throw new Error("NEXT_PUBLIC_BASE_URL is missing.");
-      }
+    //   if (!baseURL) {
+    //     throw new Error("NEXT_PUBLIC_BASE_URL is missing.");
+    //   }
 
-      // Use Cafe Name as QR ID
+    //   // Use Cafe Name as QR ID
       const qrId = cafeName.trim();
 
-      // Encode spaces and special characters
-      const trackingURL = `${baseURL}/api/scan/${encodeURIComponent(qrId)}`;
+    //   // Encode spaces and special characters
+    //   const trackingURL = `${baseURL}/api/scan/${encodeURIComponent(qrId)}`;
+    const baseURL = window.location.origin;
+
+const trackingURL = `${baseURL}/api/scan/${encodeURIComponent(qrId)}`;
 
       setScanURL(trackingURL);
 
@@ -169,7 +172,7 @@ export default function QRGenerator() {
         },
         body: JSON.stringify({
           id: qrId,
-          cafeName: qrId,
+          cafeName: cafeName.trim(),
           destination: trackingURL,
         }),
       });
@@ -182,9 +185,11 @@ export default function QRGenerator() {
 
       alert("✅ QR Code created successfully!");
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      alert(error.message || "Something went wrong.");
+      const message =
+        error instanceof Error ? error.message : "Something went wrong.";
+      alert(message);
     } finally {
       setLoading(false);
     }

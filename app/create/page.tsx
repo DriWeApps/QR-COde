@@ -37,6 +37,7 @@ export default function CreateQRPage() {
         },
         body: JSON.stringify({
           id,
+          cafeName: id,
           destination,
         }),
       });
