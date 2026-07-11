@@ -69,9 +69,12 @@ export async function GET(
     );
 
     // Redirect to Thank You page
-    return NextResponse.redirect(
-  `${process.env.NEXT_PUBLIC_BASE_URL}/scan/${id}`,
-  302
+//     return NextResponse.redirect(
+//   `${process.env.NEXT_PUBLIC_BASE_URL}/scan/${id}`,
+//   302
+// );
+ return NextResponse.redirect(
+  new URL(`/scan/${id}`, req.url)
 );
 
   } catch (error) {
