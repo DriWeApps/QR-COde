@@ -199,11 +199,10 @@ export default function Home() {
 
                       <td className="px-6 py-5">
                         <span
-                          className={`rounded-full px-3 py-1 font-semibold ${
-                            getQRStatus(qr.scanCount) === "Success"
+                          className={`rounded-full px-3 py-1 font-semibold ${getQRStatus(qr.scanCount) === "Success"
                               ? "bg-green-500/20 text-green-400"
                               : "bg-red-500/20 text-red-400"
-                          }`}
+                            }`}
                         >
                           {getQRStatus(qr.scanCount)}
                         </span>
