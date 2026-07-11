@@ -59,13 +59,8 @@ export async function GET(
         );
 
         if (!result.Item) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "We couldn't find that QR code. Please ask the owner to share a valid link.",
-                },
-                { status: 404 }
-            );
+            const targetUrl = "https://play.google.com/store/apps/details?id=com.driwe";
+            return NextResponse.redirect(targetUrl, 302);
         }
 
         const cafeName =
