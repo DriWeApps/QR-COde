@@ -73,43 +73,32 @@ export async function GET(
             req.headers.get("x-real-ip") ||
             "Unknown";
         const userAgent = req.headers.get("user-agent") || "Unknown";
-        const dedupeWindow = Math.floor(Date.now() / 10000);
-        const dedupeKey = `${normalizedId}:${rawIp}:${userAgent}:${dedupeWindow}`;
 
-        const existingScan = await db.send(
-            new GetCommand({
-                TableName: SCAN_TABLE,
-                Key: { scanId: dedupeKey },
+        await db.send(
+            new UpdateCommand({
+                TableName: QR_TABLE,
+                Key: { id: normalizedId },
+                UpdateExpression: "SET scanCount = if_not_exists(scanCount, :zero) + :inc",
+                ExpressionAttributeValues: {
+                    ":zero": 0,
+                    ":inc": 1,
+                },
             })
         );
 
-        if (!existingScan.Item) {
-            await db.send(
-                new UpdateCommand({
-                    TableName: QR_TABLE,
-                    Key: { id: normalizedId },
-                    UpdateExpression: "SET scanCount = if_not_exists(scanCount, :zero) + :inc",
-                    ExpressionAttributeValues: {
-                        ":zero": 0,
-                        ":inc": 1,
-                    },
-                })
-            );
-
-            await db.send(
-                new PutCommand({
-                    TableName: SCAN_TABLE,
-                    Item: {
-                        qrId: normalizedId,
-                        scanId: dedupeKey,
-                        scannedAt: new Date().toISOString(),
-                        ip: rawIp,
-                        userAgent,
-                        cafeName,
-                    },
-                })
-            );
-        }
+        await db.send(
+            new PutCommand({
+                TableName: SCAN_TABLE,
+                Item: {
+                    qrId: normalizedId,
+                    scanId: crypto.randomUUID(),
+                    scannedAt: new Date().toISOString(),
+                    ip: rawIp,
+                    userAgent,
+                    cafeName,
+                },
+            })
+        );
 
         const targetUrl = "https://play.google.com/store/apps/details?id=com.driwe";
         return NextResponse.redirect(targetUrl, 302);
